@@ -23,8 +23,18 @@ module Onelogin
         request           = Zlib::Deflate.deflate(request, 9)[2..-5] if settings.compress_request
         base64_request    = Base64.encode64(request)
         encoded_request   = CGI.escape(base64_request)
+
+        encoded_sig_alg = CGI.escape('http://www.w3.org/2000/09/xmldsig#rsa-sha1')
+
         params_prefix     = (settings.idp_sso_target_url =~ /\?/) ? '&' : '?'
-        request_params    = "#{params_prefix}SAMLRequest=#{encoded_request}"
+        url_string        = "SAMLRequest=#{encoded_request}&SigAlg=#{encoded_sig_alg}"
+        request_params    =  "#{params_prefix}#{url_string}"
+
+        if settings.private_key
+          signature         = settings.private_key.sign(OpenSSL::Digest::SHA1.new, url_string)
+          encoded_signature = CGI.escape(Base64.encode64(signature).gsub("\n", ''))
+          request_params += "&Signature=#{encoded_signature}"
+        end
 
         params.each_pair do |key, value|
           request_params << "&#{key.to_s}=#{CGI.escape(value.to_s)}"
