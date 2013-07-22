@@ -27,12 +27,14 @@ module Onelogin
         encoded_sig_alg = CGI.escape('http://www.w3.org/2000/09/xmldsig#rsa-sha1')
 
         params_prefix     = (settings.idp_sso_target_url =~ /\?/) ? '&' : '?'
-        url_string        = "SAMLRequest=#{encoded_request}&SigAlg=#{encoded_sig_alg}"
+        url_string        = "SAMLRequest=#{encoded_request}"
+        url_string       += "&RelayState=#{CGI.escape(params['RelayState'])}" if params['RelayState']
+        url_string       += "&SigAlg=#{encoded_sig_alg}"
         request_params    =  "#{params_prefix}#{url_string}"
 
         if settings.private_key
           signature         = settings.private_key.sign(OpenSSL::Digest::SHA1.new, url_string)
-          encoded_signature = CGI.escape(Base64.encode64(signature).gsub("\n", ''))
+          encoded_signature = CGI.escape(Base64.encode64(signature))
           request_params += "&Signature=#{encoded_signature}"
         end
 
@@ -46,7 +48,7 @@ module Onelogin
       def create_authentication_xml_doc(settings)
         uuid = "_" + UUID.new.generate
         time = Time.now.utc.strftime("%Y-%m-%dT%H:%M:%SZ")
-        # Create AuthnRequest root element using REXML 
+        # Create AuthnRequest root element using REXML
         request_doc = REXML::Document.new
 
         root = request_doc.add_element "samlp:AuthnRequest", { "xmlns:samlp" => "urn:oasis:names:tc:SAML:2.0:protocol" }
@@ -66,7 +68,7 @@ module Onelogin
           issuer.text = settings.issuer
         end
         if settings.name_identifier_format != nil
-          root.add_element "samlp:NameIDPolicy", { 
+          root.add_element "samlp:NameIDPolicy", {
               "xmlns:samlp" => "urn:oasis:names:tc:SAML:2.0:protocol",
               # Might want to make AllowCreate a setting?
               "AllowCreate" => "true",
@@ -75,14 +77,14 @@ module Onelogin
         end
 
         # BUG fix here -- if an authn_context is defined, add the tags with an "exact"
-        # match required for authentication to succeed.  If this is not defined, 
+        # match required for authentication to succeed.  If this is not defined,
         # the IdP will choose default rules for authentication.  (Shibboleth IdP)
         if settings.authn_context != nil
-          requested_context = root.add_element "samlp:RequestedAuthnContext", { 
+          requested_context = root.add_element "samlp:RequestedAuthnContext", {
             "xmlns:samlp" => "urn:oasis:names:tc:SAML:2.0:protocol",
             "Comparison" => "exact",
           }
-          class_ref = requested_context.add_element "saml:AuthnContextClassRef", { 
+          class_ref = requested_context.add_element "saml:AuthnContextClassRef", {
             "xmlns:saml" => "urn:oasis:names:tc:SAML:2.0:assertion",
           }
           class_ref.text = settings.authn_context
