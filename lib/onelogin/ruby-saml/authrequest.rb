@@ -24,15 +24,14 @@ module Onelogin
         base64_request    = Base64.encode64(request)
         encoded_request   = CGI.escape(base64_request)
 
-        encoded_sig_alg = CGI.escape('http://www.w3.org/2000/09/xmldsig#rsa-sha1')
-
         params_prefix     = (settings.idp_sso_target_url =~ /\?/) ? '&' : '?'
-        url_string        = "SAMLRequest=#{encoded_request}"
-        url_string       += "&RelayState=#{CGI.escape(params['RelayState'])}" if params['RelayState']
-        url_string       += "&SigAlg=#{encoded_sig_alg}"
-        request_params    =  "#{params_prefix}#{url_string}"
+        request_params    = "#{params_prefix}SAMLRequest=#{encoded_request}"
 
         if settings.private_key
+          encoded_sig_alg = CGI.escape('http://www.w3.org/2000/09/xmldsig#rsa-sha1')
+          url_string        = "SAMLRequest=#{encoded_request}"
+          url_string       += "&RelayState=#{CGI.escape(params['RelayState'])}" if params['RelayState']
+          url_string       += "&SigAlg=#{encoded_sig_alg}"
           signature         = settings.private_key.sign(OpenSSL::Digest::SHA1.new, url_string)
           encoded_signature = CGI.escape(Base64.encode64(signature))
           request_params += "&Signature=#{encoded_signature}"
