@@ -28,13 +28,13 @@ module Onelogin
         request_params    = "#{params_prefix}SAMLRequest=#{encoded_request}"
 
         if settings.private_key
-          encoded_sig_alg = CGI.escape('http://www.w3.org/2000/09/xmldsig#rsa-sha1')
+          encoded_sig_alg   = CGI.escape('http://www.w3.org/2000/09/xmldsig#rsa-sha1')
           url_string        = "SAMLRequest=#{encoded_request}"
           url_string       += "&RelayState=#{CGI.escape(params['RelayState'])}" if params['RelayState']
           url_string       += "&SigAlg=#{encoded_sig_alg}"
           signature         = settings.private_key.sign(OpenSSL::Digest::SHA1.new, url_string)
           encoded_signature = CGI.escape(Base64.encode64(signature))
-          request_params += "&Signature=#{encoded_signature}"
+          request_params   += "&SigAlg=#{encoded_sig_alg}&Signature=#{encoded_signature}"
         end
 
         params.each_pair do |key, value|
