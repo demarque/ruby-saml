@@ -19,7 +19,7 @@ module Onelogin
         request = ""
         request_doc.write(request)
 
-        deflated_request  = Zlib::Deflate.deflate(request, 9)[2..-5]
+        deflated_request  = settings.compress_request ? Zlib::Deflate.deflate(request, 9)[2..-5] : request
         base64_request    = Base64.encode64(deflated_request)
         encoded_request   = CGI.escape(base64_request)
 
